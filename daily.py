@@ -14,47 +14,57 @@ for name in all_file:
         #文件路径
         new_path = path+new_name+'.xlsx'
         #打开相应的文件
-        workbook = xlrd.open_workbook(new_path)
-        #文件所包含的所有sheetname
-        sheetname = workbook.sheet_names()
-        # print(type(sheetname))
-        #sheetname的个数
-        num = workbook.nsheets
+        xl =pd.ExcelFile(new_path)
+        sheet_names = xl.sheet_names
+        # print(sheet_names)
+        if len(sheet_names) > 1:
+            try:
 
-        conn = pymysql.connect(host='10.16.31.77', user='root', password='AutoTest',
-                               port=3306,database = 'chart_demo')
-        cursor = conn.cursor()
-
-        for j in range(1,len(sheetname)):
-            data = pd.read_excel(new_path, sheet_name=sheetname[j])
-            for k in range(len(data['TIME'])):
-                timstr = '2020-'+str(sheetname[j]) + ' '+str(data['TIME'][k])
-                try:
-                    time.strptime(timstr, "%Y-%m-%d %H:%M:%S")
-                    create_time = datetime.datetime.fromtimestamp(time.mktime(time.strptime(timstr, "%Y-%m-%d %H:%M:%S")))
-
-                except Exception:
+                if sheet_names[-1]=='index':
                     continue
+                else:
+                    conn = pymysql.connect(host='10.16.31.77', user='root', password='AutoTest',
+                                           port=3306,database = 'chart_demo')
+                    cursor = conn.cursor()
 
-                print(create_time)
-                dalvik = data['DALVIK'][k]
-                print(dalvik)
-                native = data['NATIVE'][k]
-                print(native)
-                cpu = data['CPU'][k]
-                print(cpu)
-                sql = "insert into daily_data " \
-                      "(package_name,dalvik,native,cpu,time) " \
-                      "values('%s','%d','%d','%d','%s')" \
-                      % (new_name, dalvik, native, cpu, create_time)
-                try:
-                    # values = (dalvik_max,dalvik_min,dalvik_avg,native_max,native_min,native_avg,cpu_max,cpu_min,cpu_avg,crash)
-                    cursor.execute(sql)
-                    conn.commit()
-                    print('....................')
-                except:
-                    conn.rollback()
-                    print('=====================')
+                    # # name = '09-02','09-03','09-04'
+                    # for name in sheetname:
+                    #     for j in range(-3,len(sheetname)):
 
-        cursor.close()
-        conn.close()
+                    data = pd.read_excel(new_path, sheet_name=sheet_names[-1])
+                    # print(data)
+                    for k in range(len(data['TIME'])):
+                        timstr = '2020-' + str(sheet_names[-1]) + ' ' + str(data['TIME'][k])
+                        try:
+                            time.strptime(timstr, "%Y-%m-%d %H:%M:%S")
+                            create_time = datetime.datetime.fromtimestamp(
+                                time.mktime(time.strptime(timstr, "%Y-%m-%d %H:%M:%S")))
+                        except Exception:
+                            continue
+                        print(create_time)
+                        dalvik = data['DALVIK'][k]
+                        print(dalvik)
+                        native = data['NATIVE'][k]
+                        print(native)
+                        cpu = data['CPU'][k]
+                        print(cpu)
+
+                        sql = "insert into daily_data " \
+                              "(package_name,dalvik,native,cpu,time) " \
+                              "values('%s','%d','%d','%d','%s')" \
+                              % (new_name, dalvik, native, cpu, create_time)
+                        try:
+                            # values = (dalvik_max,dalvik_min,dalvik_avg,native_max,native_min,native_avg,cpu_max,cpu_min,cpu_avg,crash)
+                            cursor.execute(sql)
+                            conn.commit()
+                            print(sql)
+                            print('....................')
+
+                        except:
+                            conn.rollback()
+                            print('=====================')
+
+                    cursor.close()
+                    conn.close()
+            except Exception:
+                continue
